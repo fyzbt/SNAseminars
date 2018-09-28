@@ -1,0 +1,45 @@
+library(igraph)
+library(ggraph)
+library(readr)
+
+members_friends = read_csv("~/Downloads/members_friends.csv")
+
+df.g = graph.data.frame(d=members_friends, directed = FALSE)
+V(df.g)$Degree = igraph::degree(df.g)
+df.g = delete.vertices(df.g, V(df.g)[degree(df.g) < 20])
+df.g = delete.vertices(df.g, V(df.g)[degree(df.g) == 0])
+
+df.g = simplify(df.g, remove.multiple = TRUE)
+l = layout_nicely(df.g)
+V(df.g)$Degree <- igraph::degree(df.g)
+
+set.seed(1)
+plot(df.g, 
+     vertex.label=NA, 
+     vertex.color="black", 
+     vertex.size=0.9,
+     edge.width=0.5,
+     layout=l, mode="undirected")
+
+
+#ОБЩАЯ ТАБЛИЦА ПО МЕТРИКАМ
+ptable <- as.data.frame(cbind(degree(df.g), round(closeness(df.g), 3), betweenness(df.g), round(evcent(df.g)$vector, 3)))
+titles <- c("Degree", "Closeness", "Betweenness", "Eigenvector")
+colnames(ptable) <- titles
+ptable
+
+
+#EIGEN CENTRALITY
+eigen_centrality(df.g)
+evc <- eigen_centrality(df.g)
+ev <- eigen_centrality(df.g)$vector
+
+
+eig_df <- as.data.frame(evc)
+
+#V(df.g)$size=eiv/5
+plot(df.g,layout = l, vertex.size=ev*10,  main="Eigenvector centrality", vertex.label=NA)
+
+
+
+
