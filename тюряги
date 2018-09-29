@@ -1,45 +1,51 @@
 library(igraph)
 library(ggraph)
 library(readr)
+library(dplyr)
 
-members_friends = read_csv("~/Downloads/members_friends.csv")
+options(scipen = 999)
+
+members_friends = read_csv("~/uni classes/SNA/members_friends.csv")
+members_friends <- members_friends %>% filter(friend %in% ok)
 
 df.g = graph.data.frame(d=members_friends, directed = FALSE)
-V(df.g)$Degree = igraph::degree(df.g)
+V(df.g)$Degree <- igraph::degree(df.g)
+
 df.g = delete.vertices(df.g, V(df.g)[degree(df.g) < 20])
 df.g = delete.vertices(df.g, V(df.g)[degree(df.g) == 0])
 
+df.g = delete.vertices(df.g, V(df.g)[degree(df.g) >= 58])
+
 df.g = simplify(df.g, remove.multiple = TRUE)
+
+df = igraph::as_data_frame(df.g)
+members_attr = members_profile_info_bdate
+colnames(members_attr)[1] = 'from'
+members_attr$from = as.character(members_attr$from)
+df = left_join(df, members_attr, by='from') %>% select(from, to, sex)
+df.g = graph.data.frame(d=select(df, from, to), directed = FALSE)
+#V(df.g)$Sex = df$sex
+df.g = set_vertex_attr(df.g, 'sex', index = V(df.g), df$sex)
 l = layout_nicely(df.g)
-V(df.g)$Degree <- igraph::degree(df.g)
+V(df.g)$color=V(df.g)$sex #assign the "Sex" attribute as the vertex color
+V(df.g)$color=gsub("2","#FF0000", V(df.g)$color) #Females will be red
+V(df.g)$color=gsub("1","#0000FF", V(df.g)$color)
+col = V(df.g)$color
 
-set.seed(1)
-plot(df.g, 
-     vertex.label=NA, 
-     vertex.color="black", 
-     vertex.size=0.9,
-     edge.width=0.5,
-     layout=l, mode="undirected")
-
-
-#ОБЩАЯ ТАБЛИЦА ПО МЕТРИКАМ
-ptable <- as.data.frame(cbind(degree(df.g), round(closeness(df.g), 3), betweenness(df.g), round(evcent(df.g)$vector, 3)))
-titles <- c("Degree", "Closeness", "Betweenness", "Eigenvector")
-colnames(ptable) <- titles
-ptable
-
-
-#EIGEN CENTRALITY
 eigen_centrality(df.g)
-evc <- eigen_centrality(df.g)
 ev <- eigen_centrality(df.g)$vector
-
-
 eig_df <- as.data.frame(evc)
 
-#V(df.g)$size=eiv/5
-plot(df.g,layout = l, vertex.size=ev*10,  main="Eigenvector centrality", vertex.label=NA)
-
-
-
-
+plot(df.g, 
+     #vertex.label=NA,
+     vertex.color = col,
+     vertex.frame.color = col,
+     vertex.size=ev*10, #умножаем для того, чтобы избавиться от дроби
+     edge.width=0.5,
+     layout=l, mode="undirected")
+     
+full_df <- as.data.frame(cbind(degree(df.g), round(closeness(df.g), 3), betweenness(df.g), evcent(df.g)$vector))
+titles <- c("Degree", "Closeness", "Betweenness", "Eigenvector")
+colnames(full_df) <- titles
+full_df$name = as.character(rownames(full_df))
+summary(full_df$Eigenvector)
