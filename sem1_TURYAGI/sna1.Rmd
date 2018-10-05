@@ -1,0 +1,456 @@
+---
+title: "Анализ социальной структуры группы Вконтакте 'Подслушано в тюрьме'"
+output: html_document
+authors: Батаева, Бердниковва, Каплан, Нурмагомбетова, Масалова, Силютина, Черепанова
+---
+
+*Описание работы*
+
+Для своей работы мы скачали данные публичной группы ВКонтакте "Подслушано в тюрьме", где общаются люди, находящиеся в местах заключения между собой и с людьми, находящимися "на свободе", желающие познакомиться или поддержать контакт с заключенными в МЛС.
+
+Идея заключается в том, чтобы посмотреть на то, какова структура сети данной группы. Является ли она плотной или нет? Каковы самые высокие показатели мер центральности? Мы постараемся в максимально развернутой форме ответить на вопросы, предложенные в задании.
+
+Стоит отметить, что мы оставляем исключительно реципрокные связи, чтобы определить друзей, которые дабавили друг друга в друзья и исключить "фолловеров" (однонаправленная связь). Тем самым мы также снижаем размерность сети - на полная база данных содержит информацию об около 34 тысячах связей.
+
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#uploading data
+library(igraph)
+library(ggraph)
+library(readr)
+library(dplyr)
+library(ggplot2)
+options(scipen = 999)
+
+
+members_friends = read_csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/members_friends.csv")) # загружаем датасет со связями
+```
+
+```{r echo=FALSE, warning=FALSE}
+# фильтруем данные по размеру дегри и оставляем только узлы с дегри выше 20, это необходимо для того, чтобы сократить число узлов в сети и сократить ее размерность.
+df.g = graph.data.frame(d=members_friends, directed = FALSE)
+V(df.g)$Degree = igraph::degree(df.g)
+df.g = delete.vertices(df.g, V(df.g)[degree(df.g) < 20])
+df.g = delete.vertices(df.g, V(df.g)[degree(df.g) == 0])
+
+# убираем узлы с дегри >= 58 (95%-й квантиль), чтобы на первом этапе отсеять выбросы, состоящие из ботов
+df.g = delete.vertices(df.g, V(df.g)[degree(df.g) >= 58])
+df.g = simplify(df.g, remove.multiple = TRUE)
+l = layout_nicely(df.g)
+
+V(df.g)$Degree = igraph::degree(df.g)
+
+# рисуем базовую сеть дружбы
+set.seed(1)
+plot(df.g, 
+     vertex.label=NA, 
+     vertex.color="black", 
+     vertex.size=0.9,
+     edge.width=0.5,
+     layout=l, mode="undirected")
+```
+
+
+#Меры центральности
+
+Для начала создадим базу данных со всеми мерами центральости, которые будут использоваться далее.
+
+```{r echo=FALSE, warning=FALSE}
+ptable = as.data.frame(cbind(degree(df.g), closeness(df.g), betweenness(df.g), round(evcent(df.g)$vector, 3)))
+titles = c("Degree", "Closeness", "Betweenness", "Eigenvector")
+colnames(ptable) = titles
+
+ptable$names = rownames(ptable)
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#Создаем полный датасет с атрибутами
+
+library(readr)
+members_profile_info_bdate = read_csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/members_profile_info_bdate.csv")) # загружаем датасет с атрибутами
+colnames(members_profile_info_bdate)[1] = "names"
+ptable$names = as.character(ptable$names)
+members_profile_info_bdate$names = as.character(members_profile_info_bdate$names)
+
+library(dplyr)
+full_df = left_join(ptable, members_profile_info_bdate, by="names")
+full_df$sex = as.character(full_df$sex)
+
+```
+
+##Degree centrality
+
+Для начала выявим, кто в сети подписчиков важнее по признаку "у кого больше друзей" (чем больше связей, тем лучше). Такой показатель называется **степенью (degree)**. 
+
+(Помним, что в данный момент наши данные содержат узлы с дегри предварительно отфильтрованы)
+
+Нарисуем график, показывающий то, как распределяется наш дегри среди узлов в сети.
+Очевидно, что больше всего узлов с минимальным значением дегри. 
+
+```{r echo=FALSE, warning=FALSE}
+Degree = full_df %>% group_by(Degree) %>% tally()
+Degree = as.data.frame(Degree)
+head(Degree)
+tail(Degree)
+```
+
+```{r echo=FALSE, warning=FALSE}
+library(ggplot2)
+ggplot()+
+  geom_density(data=full_df, aes(x=Degree, fill=sex), alpha = 0.1) + theme_minimal() + xlab("Degree") + ylab("Proportion") + ggtitle("Degree centrality")
+```
+
+```{r echo=FALSE, warning=FALSE}
+V(df.g)$Degree = igraph::degree(df.g)
+V(df.g)$Gender = full_df$sex
+
+
+#Попытаемся раскрасить график 
+# Сделаем палетку из 5 цветов
+library(RColorBrewer)
+coul = brewer.pal(2, "Set1")
+
+# Создадим цветовой вектор
+my_color=coul[as.numeric(as.factor(V(df.g)$Gender))]
+
+set.seed(250)
+plot(df.g, 
+vertex.label=NA,
+vertex.color=my_color, 
+vertex.size=abs(V(df.g)$Degree)*0.3,
+edge.width=0.5,
+layout=l, mode="undirected")
+```
+
+
+
+
+##Closeness centrality
+
+Если нам интересны вершины с наиболее короткими путями до остальных (т.е. наиболее близкие к остальным), то рассматривается **центральность по близости (closeness)**. 
+```{r echo=FALSE, warning=FALSE}
+Closeness = full_df %>% group_by(Closeness) %>% tally()
+Closeness = as.data.frame(Closeness)
+head(Closeness)
+tail(Closeness)
+```
+
+```{r echo=FALSE, warning=FALSE}
+ggplot()+
+  geom_histogram(data=full_df, aes(x=Closeness, fill=sex), binwidth = 0.000001) + theme_minimal() + xlab("Closeness") + ylab("Number") + ggtitle("Closeness centrality")
+```
+
+```{r echo=FALSE, warning=FALSE}
+V(df.g)$Closeness = igraph::closeness(df.g)
+
+#Попытаемся раскрасить график 
+# Сделаем палетку из 5 цветов
+library(RColorBrewer)
+coul5 = brewer.pal(2, "Set1")
+
+# Создадим цветовой вектор
+my_color1=coul[as.numeric(as.factor(V(df.g)$Gender))]
+
+#рисуем раскрашенную сеть
+set.seed(250)
+plot(df.g, 
+vertex.label=NA, 
+vertex.color=my_color1, 
+vertex.size=abs(V(df.g)$Closeness)*300000,
+edge.width=0.5,
+layout=l, mode="undirected")
+
+```
+
+```{r echo=FALSE, warning=FALSE}
+summary(full_df$Closeness)
+```
+
+
+##Betweenness centrality
+
+Еще одним рассматриваемым показателем является **центральность по посредничеству, битвинность (betweenness)**. В этом случае важны вершины, которые являются посредниками между группами, находятся на "выгодном" месте.
+
+###Node Betweenness 
+
+```{r echo=FALSE, warning=FALSE}
+ggplot()+
+  geom_density(data=full_df, aes(x=log10(Betweenness), fill=sex), alpha=0.1) + theme_minimal() + xlab("Log10 betweenness") + ylab("Proportion") + ggtitle("Betweenness centrality")
+```
+
+
+```{r echo=FALSE, warning=FALSE}
+V(df.g)$Betweenness = igraph::betweenness(df.g)
+
+full_df = full_df %>% mutate(log_betw=log10(Betweenness))  
+
+V(df.g)$log_betw = full_df$log_betw
+
+set.seed(250)
+plot(df.g, 
+vertex.label=NA, 
+vertex.color=my_color1, 
+vertex.size=abs(V(df.g)$Betweenness)*0.005,
+edge.width=0.5,
+layout=l, mode="undirected")
+```
+
+```{r echo=FALSE, warning=FALSE}
+summary(full_df$Betweenness)
+```
+
+###Edge Betweenness 
+
+
+```{r echo=FALSE, warning=FALSE}
+E(df.g)$Edge_Betweenness = igraph::edge.betweenness(df.g)
+
+#Попытаемся раскрасить график 
+# Сделаем палетку из 5 цветов
+library(RColorBrewer)
+coul = brewer.pal(2, "Set1")
+# Создадим цветовой вектор
+my_color1=coul[as.numeric(as.factor(V(df.g)$Gender))]
+
+set.seed(250)
+plot(df.g, 
+vertex.label=NA, 
+vertex.color=my_color1, 
+vertex.size=abs(V(df.g)$Betweenness)*0.005,
+edge.width=abs(E(df.g)$Edge_Betweenness)*0.005,
+layout=l, mode="undirected")
+```
+
+```{r echo=FALSE, warning=FALSE}
+summary(E(df.g)$Edge_Betweenness)
+```
+
+##Information centrality
+
+```{r echo=FALSE, warning=FALSE}
+#devtools::install_github("TomKellyGenetics/info.centrality") # раскомментируйте, если ранее не загружали данную библиотеку
+library(info.centrality)
+V(df.g)$Info = info.centrality.vertex(df.g)
+full_df$Info = V(df.g)$Info
+```
+
+```{r echo=FALSE, warning=FALSE}
+l = layout_nicely(df.g)
+
+edgelist = as_edgelist(df.g) %>% as.data.frame() %>% cbind(E(df.g)$Edge_Betweenness)
+
+set.seed(250)
+plot(df.g, 
+vertex.label=NA, 
+vertex.color=my_color1, 
+vertex.size=abs(V(df.g)$Info)*500,
+edge.width=0.5,
+layout=l, mode="undirected")
+
+# top profiles with informationcentrality metric
+V(df.g)[abs(info.centrality.vertex(df.g)) > 0.01]
+
+```
+
+```{r echo=FALSE, warning=FALSE}
+summary(V(df.g)$Info)
+```
+
+
+Для интерпретации мер центральности
+
+```{r echo=FALSE, warning=FALSE}
+#создаем датасет со всеми данными по центральностям
+df.g_attr = data.frame(n=get.vertex.attribute(df.g,"name"),d=get.vertex.attribute(df.g,"Degree"),c=get.vertex.attribute(df.g,"Closeness"),b=get.vertex.attribute(df.g,"Betweenness"), l_b=get.vertex.attribute(df.g,"Betweenness"), g=get.vertex.attribute(df.g,"Gender"), i=get.vertex.attribute(df.g,"Info"))
+```
+
+```{r echo=FALSE, warning=FALSE}
+df.g_attr = data.frame(n=get.vertex.attribute(df.g,"name"),d=get.vertex.attribute(df.g,"Degree"),c=get.vertex.attribute(df.g,"name"),b=get.vertex.attribute(df.g,"Betweenness"), l_b=get.vertex.attribute(df.g,"Betweenness"), g=get.vertex.attribute(df.g,"Gender"), i=get.vertex.attribute(df.g,"Info"))
+```
+
+```{r echo=FALSE, warning=FALSE}
+summary(df.g_attr$i)
+```
+
+#Меры централизации
+
+##Degree Centralization
+
+Метрика для сети и для идеальной сети: 
+
+```{r echo=FALSE, warning=FALSE}
+degr_cent = centr_degree(df.g, mode = "total", loops = TRUE, normalized = TRUE)
+degr_cent$centralization # получаем значение для сети
+degr_cent$theoretical_max # значение для идеальной сети с таким же кол-вом узлов и ребер
+```
+
+##Information Centralization
+
+Метрика для сети:
+
+```{r echo=FALSE, warning=FALSE}
+library(info.centrality)
+info_cent = info.centrality.vertex(df.g)
+centralize(info_cent, normalized = FALSE)
+```
+
+##Closeness Centralization
+
+Метрика для сети и для идеальной сети: 
+
+```{r echo=FALSE, warning=FALSE}
+close_cent = centralization.closeness(df.g, mode = "total", normalized = TRUE)
+close_cent$centralization
+close_cent$theoretical_max
+```
+
+
+##Betweenness Centralization
+
+Метрика для сети и для идеальной сети: 
+
+```{r echo=FALSE, warning=FALSE}
+node_cent = centralization.betweenness(df.g)
+node_cent$centralization
+node_cent$theoretical_max
+```
+
+
+##Edge betweenness Centralization
+
+Метрика для сети: 
+
+```{r echo=FALSE, warning=FALSE}
+edge_btw = edge_betweenness(df.g, e = E(df.g), directed = FALSE, weights = NULL)
+edge_cent = centralize(edge_btw, normalized = FALSE)
+edge_cent # не нормализованные значения
+```
+
+#Eigenvector Centrality
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+df = igraph::as_data_frame(df.g)
+members_attr = members_profile_info_bdate
+colnames(members_attr)[1] = 'from'
+members_attr$from = as.character(members_attr$from)
+df = left_join(df, members_attr, by='from') %>% select(from, to, sex)
+df.g = graph.data.frame(d=select(df, from, to), directed = FALSE)
+#V(df.g)$Sex = df$sex
+df.g = set_vertex_attr(df.g, 'sex', index = V(df.g), df$sex)
+l = layout_nicely(df.g)
+V(df.g)$color=V(df.g)$sex #assign the "Sex" attribute as the vertex color
+V(df.g)$color=gsub("2","#FF0000", V(df.g)$color) #Females will be red
+V(df.g)$color=gsub("1","#0000FF", V(df.g)$color)
+col = V(df.g)$color
+
+ev <- eigen_centrality(df.g)$vector
+eig_df <- as.data.frame(ev)
+
+plot(df.g, 
+     vertex.label=NA,
+     vertex.color = col,
+     vertex.frame.color = col,
+     vertex.size=ev*10, #умножаем для того, чтобы избавиться от дроби
+     edge.width=0.5,
+     layout=l, mode="undirected")
+     
+full_df <- as.data.frame(cbind(degree(df.g), round(closeness(df.g), 3), betweenness(df.g), evcent(df.g)$vector))
+titles <- c("Degree", "Closeness", "Betweenness", "Eigenvector")
+colnames(full_df) <- titles
+full_df$name = as.character(rownames(full_df))
+summary(full_df$Eigenvector)
+```
+
+
+#Атрибуты и их распределение в завимости от мер центральности
+
+```{r echo=FALSE, warning=FALSE}
+# фильтрация и обработка данных
+
+members_attr$bdate = sub('.*\\.', '', members_attr$bdate)
+members_attr$bdate = ifelse(nchar(members_attr$bdate) < 4, NA, members_attr$bdate) 
+members_attr$age = 2017 - as.numeric(members_attr$bdate)
+members_attr$age = cut(x = members_attr$age, breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100))
+df.g = graph.data.frame(d=members_friends, directed = FALSE)
+
+df.g = delete.vertices(df.g, V(df.g)[degree(df.g) < 20])
+df.g = delete.vertices(df.g, V(df.g)[degree(df.g) == 0])
+
+df.g = delete.vertices(df.g, V(df.g)[degree(df.g) >= 58])
+df.g = simplify(df.g, remove.multiple = TRUE)
+
+df = igraph::as_data_frame(df.g)
+colnames(members_attr)[1] = 'from'
+members_attr$from = as.character(members_attr$from)
+
+df = left_join(df, members_attr, by='from') %>% select(from, to, sex, age)
+df.g = graph.data.frame(d=select(df, from, to), directed = FALSE)
+#V(df.g)$Sex = df$sex
+df.g = set_vertex_attr(df.g, 'sex', index = V(df.g), df$sex)
+df.g = set_vertex_attr(df.g, 'age', index = V(df.g), df$age)
+
+ptable = as.data.frame(cbind(degree(df.g), closeness(df.g), betweenness(df.g), round(evcent(df.g)$vector, 3)))
+titles = c("Degree", "Closeness", "Betweenness","Edge_Betweenness")
+colnames(ptable) = titles
+ptable$from = rownames(ptable)
+
+ptable = left_join(ptable, df, by='from')
+
+#dt = ptable %>% select(Betweenness, sex) %>% dplyr::filter(is.na(as.character(ptable$sex)) == FALSE)
+#ggplot()+
+#  geom_density(data=dt, aes(x=log10(Betweenness), fill=as.factor(sex)), alpha = 0.1) + theme_minimal() + xlab("log10(Betweenness)") + ylab("Proportion") + ggtitle("Betweenness centrality") + 
+#  guides(fill=guide_legend(title="Sex"))
+
+#ggplot()+
+#  geom_histogram(data=dt, aes(x=Closeness, fill=as.factor(sex)), binwidth = 0.000001) + theme_minimal() + xlab("Closeness") + ylab("Number") + ggtitle("Closeness centrality")+ 
+#  guides(fill=guide_legend(title="Sex"))
+
+```
+
+## Гомофилия по возрастным группам
+
+```{r echo=FALSE, warning=FALSE}
+l = layout_nicely(df.g)
+coul = brewer.pal(9, "Set1")
+# Создадим цветовой вектор
+V(df.g)$age = df$age
+my_color=coul[as.numeric(as.factor(V(df.g)$age))]
+
+set.seed(1)
+plot(df.g, 
+vertex.label=NA,
+vertex.color = my_color,
+vertex.frame.color = my_color,
+vertex.size=2.5,
+edge.width=0.3,
+layout=l, mode="undirected")
+legend("bottomleft", legend=levels(as.factor(V(df.g)$age)), col = coul , bty = "n", pch=20 , pt.cex = 3, cex = 1.5, text.col=coul , horiz = FALSE, inset = c(0.1, 0.1))
+```
+
+
+## Гомофилия по гендеру
+
+```{r echo=FALSE, warning=FALSE}
+library(ggplot2)
+
+df_from = df %>% select(from, sex)
+colnames(df_from)[2] = "sex_from"
+df_to = df_from
+colnames(df_to)[1] = "to"
+colnames(df_to)[2] = "sex_to"
+df_blank = df %>% select(from, to)
+matr = left_join(df_blank, df_from, by='from')
+matr = left_join(matr, df_to, by='to')
+matr$homo = ifelse((matr$sex_from == 2 & matr$sex_to == 2), 'males', ifelse((matr$sex_from == 1 & matr$sex_to == 1), 'females', 'male+female'))
+matr = matr %>% arrange(homo)
+ggplot(matr, aes(x=from, y=to)) + geom_tile(aes(fill=as.factor(homo)))+
+  theme(axis.text.y=element_blank(),
+        axis.ticks.y=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) + 
+  guides(fill=guide_legend(title="Homophily")) 
+
+```
+
