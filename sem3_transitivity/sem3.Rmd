@@ -1,0 +1,220 @@
+---
+title: "Transitivy and clustering"
+output: html_document
+author: Anya Bataeva
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#uploading data
+library(igraph)
+library(ggraph)
+library(readr)
+library(dplyr)
+library(ggplot2)
+options(scipen = 999)
+
+
+m = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/LONDON_GANG.csv"), header=T, row.names=1) # загружаем датасет со связями
+m = ifelse(m != 1, 0, 1)
+m = as.matrix(m)
+
+gang = graph.adjacency(m, mode="undirected", weighted=NULL, diag=FALSE)
+plot(gang, vertex.label=NA)
+```
+
+# Transitivity
+
+types of transitivity in R
+
+list("global")
+The global transitivity of an undirected graph (directed graphs are considered as undirected ones as well). This is simply the ratio of the triangles and the connected triples in the graph. For directed graph the direction of the edges is ignored.
+
+list("local")
+The local transitivity of an undirected graph, this is calculated for each vertex given in the vids argument. The local transitivity of a vertex is the ratio of the triangles connected to the vertex and the triples centered on the vertex. For directed graph the direction of the edges is ignored.
+
+list("undirected")
+This is the same as global.
+
+list("globalundirected")
+This is the same as global.
+
+list("localundirected")
+This is the same as local.
+
+list("barrat")
+The weighted transitivity as defined A. Barrat. See details below.
+
+list("weighted")
+The same as barrat.
+
+
+```{r echo=FALSE, warning=FALSE}
+transitivity(gang, type="global")
+```
+
+```{r echo=FALSE, warning=FALSE}
+local_transit = transitivity(gang, type="local")
+V(gang)$transit = local_transit
+ggraph(gang, layout = "fr") +
+  geom_edge_link(width=0.3, show.legend = FALSE) +
+  geom_node_point(aes(size=transit*10), alpha = 0.7) +
+  theme_void() +
+  theme(legend.position="none", text=element_text(family="Times New Roman"))
+```
+
+```{r echo=FALSE, warning=FALSE}
+transitivity(gang, type="undirected")
+```
+
+```{r echo=FALSE, warning=FALSE}
+transitivity(gang, type="barrat")
+```
+
+
+# Clustering coefficient
+```{r}
+library(NetworkToolbox)
+cl_coeff <- clustcoeff(m, weighted = FALSE)
+```
+Global clustering coefficient
+```{r}
+cl_coeff$CC
+```
+Local clustering coefficient
+```{r}
+cl_coeff$CCi
+cl_coeff_CCi <- as.data.frame(cl_coeff$CCi) %>% mutate(name=rownames(cl_coeff_CCi)) 
+colnames(cl_coeff_CCi)[1] <- "coeff"
+cl_coeff_CCi <- cl_coeff_CCi %>% select(name, coeff)
+```
+
+# Community detection algos
+
+```{r}
+library(stringr)
+m<-read.csv(file.choose(),header=T,row.names=1)
+
+m1<-ifelse (m != 1, 0, 1)
+
+m1<-as.matrix(m1)
+gang <- graph.adjacency(m1,mode="undirected",
+                            weighted=NULL, diag=FALSE)
+gang = delete.vertices(gang, V(gang)[degree(gang) < 1])
+
+la<-layout_nicely(gang)
+plot(gang, layout=la, vertex.size=3,edge.width=e.wt,
+     vertex.label=NA)
+
+```
+
+Коммьюнити детекшн
+
+```{r}
+#КЛИКИИИ
+
+cliques(gang,min=3) # list of cliques
+sapply(cliques(gang,min=3), length)  # размеры клик
+largest_cliques(gang) # самые большие клики
+
+
+#КОРЫЫЫ
+kcore <- coreness(gang)    
+V(gang)$core <- kcore   
+plot.igraph(gang, vertex.color=V(gang)$core, vertex.label=NA)#один из вариантов визуализации
+
+
+#ЛУВЭЙН
+lvc <- cluster_louvain(gang)
+lvc
+sizes(lvc)
+V(gang)$lvc<-cluster_louvain(gang)
+
+
+```
+
+Картиночки
+
+```{r}
+#cliques
+set.seed(42)
+vcol <- rep("grey80", vcount(gang))
+vcol[unlist(largest_cliques(gang))] <- "gold"
+plot(as.undirected(gang), vertex.label=NA, vertex.color=vcol,vertex.size=6,edge.width=0.7)
+
+
+
+#k-cores
+set.seed(42)
+colrs <- adjustcolor( c("gray50", "tomato", "gold", "yellowgreen","lightblue","darkslateblue"), alpha=.6)
+ kc <- coreness(gang)
+plot(gang, vertex.size=kc*3, vertex.label=kc, vertex.color=colrs[kc])
+coreness(gang)
+
+
+#Louvaine
+set.seed(42)
+plot(lvc, gang,
+     edge.widh=0.3,
+     vertex.label = NA, vertex.size=6,
+     layout = layout_with_kk)
+
+```
+
+# Articulation points
+```{r}
+articulation.points(gang)
+
+V(gang)$color <- "grey80"
+
+##  Set articulation points to red:
+V(gang)$color[ articulation.points(gang) ] <- "gold"
+V(gang)$betweenness = igraph::betweenness(gang)
+
+##  Set bridge edges to red:
+num_comp <- length( decompose.graph(gang) )
+for (i in 1:length(E(gang))) {
+  G_sub <- delete.edges(gang, i)
+  if ( length( decompose.graph(G_sub) ) > num_comp ) E(gang)$color[i] <- "red"
+}
+
+set.seed(42)
+V(gang)$label.cex <- 0.7
+V(gang)$Prison = LONDON_GANG_ATTR$Prison
+V(gang)$color=V(gang)$Prison
+V(gang)$color=gsub("1","gold", V(gang)$color) #Females will be red
+V(gang)$color=gsub("0","grey80", V(gang)$color)
+col = V(gang)$color
+
+set.seed(42)
+plot(gang, layout = layout.fruchterman.reingold, 
+     vertex.size = 6,
+     vertex.color= col,
+     vertex.label = ifelse(V(gang) %in% articulation.points(gang), V(gang), NA),
+     vertex.label.dist = 0,
+     vertex.label.font = 2,
+     edge.color=E(gang)$color,
+     edge.width=0.7)
+
+#би компоненты
+bc <- biconnected_components(gang)
+summary(bc)
+
+largest_component <- lapply(biconnected_components(gang)$components, 
+                            length) %>% which.max()
+
+V(gang)$color <- 
+  ifelse(V(gang) %in%
+           biconnected_components(gang)$components[[largest_component]],
+         "grey80","gold")
+E(gang)$color <- "black"
+set.seed(42)
+plot(gang, layout = layout.fruchterman.reingold, 
+     #vertex.label = V(G)$name,
+     vertex.label = NA,
+     vertex.size = 6)
+```
+
+таблица с саммари по всем метрикам (дигри, клозенес, битвиность, eigen vector centrality)
+```{r}
+ptable = as.data.frame(cbind(degree(gang), closeness(gang), betweenness(gang), round(evcent(gang)$vector, 3)))
+```

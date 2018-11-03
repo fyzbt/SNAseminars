@@ -258,6 +258,17 @@ V(df.g)[abs(info.centrality.vertex(df.g)) > 0.01]
 summary(V(df.g)$Info)
 ```
 
+```{r echo=FALSE, warning=FALSE}
+ggplot()+
+  geom_density(data=full_df, aes(x=Info), alpha=0.1) + theme_minimal() + xlab("Information centrality") + ylab("Proportion") + ggtitle("Information centrality")
+```
+
+
+```{r}
+library(dplyr)
+full_df_info = dplyr::select(full_df, names, sex, bdate, Info)
+```
+
 
 Для интерпретации мер центральности
 
