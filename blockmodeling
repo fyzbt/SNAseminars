@@ -6,7 +6,7 @@ fr[fr == '3']<- 1
 fr[fr == '4']<- 1
 fr[fr == '5']<- 1
 
-fr$Art = fr$Aln
+
 fr = as.matrix(fr)
 rownames(fr) = seq(1:56)
 colnames(fr) = seq(1:56)
