@@ -1,0 +1,49 @@
+f<-file.choose()
+fr = read.csv("~/krebs_advice.csv",row.names=1)
+
+fr[fr == '2']<- 1
+fr[fr == '3']<- 1
+fr[fr == '4']<- 1
+fr[fr == '5']<- 1
+
+fr$Art = fr$Aln
+fr = as.matrix(fr)
+rownames(fr) = seq(1:56)
+colnames(fr) = seq(1:56)
+
+fr.g <- graph.adjacency(fr,mode="directed",
+                        weighted=NULL, diag=FALSE)
+
+#это конкор и, как я поняла, структурная эквивалентность, основанная на иерархии:
+install.packages("blockmodeling")
+library(blockmodeling)
+ 
+devtools::install_github("aslez/concoR")
+library(concoR)
+
+blks <- concor_hca(list(fr),p=2)
+
+blk_mod <- blockmodel(fr, blks$block, 
+                      glabels = names(fr),
+                      plabels = rownames(fr[[1]]))
+
+plot(blk_mod)
+
+#регулярная эквивалентность:
+D2<-REGE.ownm.for(M=fr)$E 
+
+
+plot.mat(fr, clu=cutree(hclust(d=as.dist(1-D2),method="ward.D"),k=5), mar=c(0,0,0.5,0), 
+         cex.axes = 1)
+
+#структурная эквивалентность:
+library(sna)
+g_eq <- equiv.clust(fr, mode = "graph", glabels = rownames(fr), plabels = rownames(fr))
+plot(g_eq)
+
+fr_block <- blockmodel(fr, g_eq, h=40, mode="graph",glabels = names(fr),)
+plot(fr_block, cex=0.1)
+
+
+
+gplot(blk_mod$block.model, gmode="graph", label=rownames(blk_mod$block.model), edge.lwd = blk_mod$block.model*10)
