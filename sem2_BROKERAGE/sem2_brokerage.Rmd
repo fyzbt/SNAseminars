@@ -1,0 +1,125 @@
+---
+title: "Holes & Brokers"
+author: "Group"
+date: "12 10 2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r, message=FALSE}
+library(igraph)
+library(readr)
+library(ggraph)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+library(ggrepel) 
+library(influenceR)
+library(sna)
+library(egonet)
+```
+
+##Загружаем файл, создаем матрицу и объект igraph
+
+```{r}
+f<-read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/drugnet.csv"))
+grug = as.matrix(f[,-1])
+
+person.g <- graph.adjacency(grug,mode="directed",
+                            weighted=NULL, diag=FALSE)
+```
+
+##Создадим цветовой вектор для атрибута этночности, построим базовую сеть 
+
+```{r}
+
+drugattr <-read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/drugattr.csv"))
+library(RColorBrewer)
+coul6 = brewer.pal(6, "Set1")
+V(person.g)$atr = drugattr$Ethnicity
+my_color1=coul6[as.numeric(as.factor(V(person.g)$atr))]
+
+
+set.seed(250)
+l = layout.auto(person.g)
+plot(person.g,
+     vertex.size=5,
+vertex.label=NA,
+vertex.label.font=1,vertex.label.dist=1,vertex.label.color="black",vertex.label.cex=0.75,
+edge.width=0.7,edge.arrow.size=0.3, vertex.color=my_color1, layout=l, edge.length=1)
+
+
+```
+
+##Показатели сети
+
+```{r}
+#констрэйнт
+constraint(person.g)
+const<-constraint(person.g)
+const<-as.data.frame(const)
+
+#эффективный размер сети 
+ens(person.g)
+effect.size<-as.data.frame(ens(person.g))
+summary(effect.size)
+
+#эффективность 
+efficiency(grug)
+
+#брокерство
+b<-brokerage(grug,V(person.g)$atr)
+summary(b)
+obs<-b["raw.nli"] #матрица реальных показателей брокерства 
+obs<-as.data.frame(obs)
+obs<-obs[which(rowSums(obs) > 0),]
+
+```
+
+##Картинки
+
+```{r}
+V(person.g)$Betweenness = igraph::betweenness(person.g)
+V(person.g)$Degree = igraph::degree(person.g)
+V(person.g)$Constraint=igraph::constraint(person.g)
+
+#сеть с дегри
+set.seed(250)
+la = layout.auto(person.g)
+plot(person.g, layout=la, vertex.size=abs(V(person.g)$Degree)*0.8,edge.width=1,
+     vertex.label=NA,edge.arrow.size=0.4,edge.length=1,vertex.color=my_color1, vertex.density=3)
+
+#сеть с битвинностью 
+set.seed(250)
+la = layout.fruchterman.reingold(person.g)
+plot(person.g, layout=la, vertex.size=abs(V(person.g)$Betweenness)*0.008,edge.width=1,
+     vertex.label=NA,edge.arrow.size=0.4,edge.length=3,vertex.color=my_color1)
+
+#сеть, где размер узла соответствует ограниченности сети  
+set.seed(250)
+plot(person.g, layout=la, vertex.size=constraint(person.g)*3,edge.width=1,
+     vertex.label =  NA,
+     vertex.label.font=1,vertex.label.dist=0.5,vertex.label.color="black",vertex.label.cex=0.75,
+     vertex.label.degree=-pi/4,
+     edge.arrow.size=0.2,edge.length=1,vertex.color=my_color1)
+
+
+#сети, где подписан один определенный узел
+set.seed(250)
+l = layout.auto(person.g)
+plot(person.g,
+     vertex.size=5,
+vertex.label=ifelse(V(person.g)$name != "X37", NA, V(person.g)$name),
+vertex.label.font=2,vertex.label.dist=0.5,vertex.label.color="black",vertex.label.cex=1.25,
+edge.width=0.7,edge.arrow.size=0.3, vertex.color=my_color1, layout=l, edge.length=1)
+
+#другой вариант построить сеть с одним подписанным узлом 
+la = layout.auto(person.g)
+set.seed(250)
+plot(person.g, layout=la, vertex.size=4,edge.width=1,
+     vertex.label = ifelse(V(person.g)$name !="X148",NA, "X148"),
+     vertex.label.font=2,vertex.label.dist=0.5,vertex.label.color="black",vertex.label.cex=1.1,
+     vertex.label.degree=-pi/4,
+     edge.arrow.size=0.2,edge.length=1,vertex.color=my_color1)
+```
