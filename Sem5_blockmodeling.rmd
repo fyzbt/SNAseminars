@@ -1,0 +1,80 @@
+---
+title: "Blockmodeling"
+output: html_document
+---
+
+```{r}
+library(igraph)
+library(sna)
+
+fr= read.csv(url('https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/krebs_advice.csv'))
+
+fr = as.matrix(fr)
+fr<-ifelse (fr != 0, 1, 0)
+fr.g <- graph.adjacency(fr,mode="directed",
+                            weighted=NULL, diag=FALSE)
+
+
+
+```
+
+##Базовая сеть
+
+```{r}
+
+l = layout_nicely(fr.g)
+plot(fr.g, layout=l,edge.width=0.7,edge.arrow.size=0.2,
+     vertex.label = V(fr.g)$name,
+     vertex.label.font=1,vertex.label.dist=1,vertex.label.color="black",vertex.label.cex=0.9,
+     vertex.size=3)
+
+```
+
+Пакеты
+```{r}
+#devtools::install_github("aslez/concoR")
+library(concoR)
+#install.packages("blockmodels")
+#install.packages("blockmodeling")
+library(blockmodeling)
+
+```
+
+##Регулярная эквивалентность 
+
+```{r}
+set.seed(4567)
+D2<-REGE.ownm.for(M=fr)$E 
+
+
+set.seed(4567)
+plot.mat(fr, clu=cutree(hclust(d=as.dist(1-D2),method="ward.D"),
+k=5),cex.axes = 1.05)
+
+```
+
+##Структурная эквивалентность 
+
+```{r}
+library(sna)
+rownames(fr) = seq(1:56)
+colnames(fr) = seq(1:56)
+
+
+library(sna)
+set.seed(4567)
+g_eq <- equiv.clust(fr,  mode = "digraph", glabels = rownames(fr), plabels = rownames(fr))
+plot(g_eq)
+set.seed(4567)
+fr_block <- blockmodel(fr, g_eq, k =5, h = 40, mode="graph",glabels = names(fr),)
+plot(fr_block, cex=0.1)
+
+mean(fr_block$block.model)
+
+V(fr.g)$name=colnames(fr)
+
+#схлопнутый граф на основе структурной эквивалентности 
+gplot(fr_block$block.model, gmode="digraph", label=rownames(fr_block$block.model), edge.lwd = fr_block$block.model*8,diag = TRUE, edge(ifelse(fr_block$block.model<0.2,fr_block$block.model,NA)))
+
+```
+
