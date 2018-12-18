@@ -1,0 +1,101 @@
+---
+title: "Практическое занятие 4: красивые визуализации"
+output: html_document
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# loading all datasets
+
+library(dplyr)
+library(readr)
+library(igraph)
+library(ggraph)
+library(ggplot2)
+library(RColorBrewer)
+options(scipen = 999)
+
+
+
+
+
+job = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/jobs.csv"), row.names=1) 
+
+
+send = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/send.csv"), row.names=1) 
+receive = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/receive.csv"), row.names=1) 
+publish = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/publish.csv"), row.names=1) 
+patronage = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/patronage.csv"), row.names=1) 
+colleagues = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/colleagues.csv"), row.names=1) 
+
+attributes = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/Attributes.csv"))
+
+job = as.matrix(job)
+send = as.matrix(send)
+receive = as.matrix(receive)
+publish = as.matrix(publish)
+patronage = as.matrix(patronage)
+colleagues = as.matrix(colleagues)
+
+multiplex = job + send + receive + publish + patronage + colleagues
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# computing centrality measures and adding node attributes
+
+mult.g <- graph.adjacency(multiplex,mode="undirected", weighted=TRUE, diag=T)
+V(mult.g)$Degree = igraph::degree(mult.g)
+V(mult.g)$Closeness = igraph::closeness(mult.g)
+V(mult.g)$Betwenness = igraph::betweenness(mult.g)
+library(info.centrality)
+V(mult.g)$Info = info.centrality.vertex(mult.g)
+
+V(mult.g)$affil = as.character(attributes$affiliation)
+V(mult.g)$gend  = as.character(attributes$gender)
+V(mult.g)$lang  = as.character(attributes$LangNow5)
+V(mult.g)$Latour5 = as.character(attributes$Latour5)
+
+```
+
+## Построение графов
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+col_topics = c("1"="#78c1e2", "2"="#176ab6", "3"="#115dab",  "4"="#254689", "5"="#050304", "9"="#ffe85b")
+
+ggraph(mult.g, layout = "fr") +
+  geom_edge_link(show.legend = TRUE, alpha = 0.4) +
+  geom_node_point(aes(color = Latour5), alpha = 0.9, size = 3.5, palette = "Set2") +
+  #geom_node_text(aes(label = name), repel = TRUE, size=5) +
+  theme_void() +
+  scale_color_manual(values=col_topics) +
+  theme(legend.position="right", text=element_text(family="Times New Roman")) +
+  labs(title = "Latour Reading on Multiplex Net", subtitle = "The darker the colour, the more one has read foreign sociologists")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+col_topics = c("1"="#78c1e2", "2"="#176ab6", "3"="#115dab",  "4"="#254689", "5"="#050304", "9"="#ffe85b")
+
+ggraph(mult.g, layout = "fr") +
+  geom_edge_link(show.legend = TRUE, alpha = 0.4) +
+  geom_node_point(color = "black", alpha = 0.9, size = V(mult.g)$Info*250, palette = "Set2") +
+  #geom_node_text(aes(label = name), repel = TRUE, size=5) +
+  theme_void() +
+  scale_color_manual(values=col_topics) +
+  theme(legend.position="right", text=element_text(family="Times New Roman")) +
+  labs(title = "Information Centrality on Multiplex Net", subtitle = "The bigger the node, the more one has information sharing resources")
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+col_topics = c("0"="#ff3902", "1"="#ff8007", "2"="#ffb404", "3"="#05badd",  "4"="#2b4871", "5"="#339933", "6"="#ff4488", "7"="#9933ff", "8"="#3b5b9d")
+
+ggraph(mult.g, layout = "fr") +
+  geom_edge_link(show.legend = TRUE, alpha = 0.4) +
+  geom_node_point(aes(color = affil), alpha = 0.9, size = V(mult.g)$Degree/6, palette = "Set2") +
+  #geom_node_text(aes(label = name), repel = TRUE, size=5) +
+  theme_void() +
+  scale_color_manual(values=col_topics) +
+  theme(legend.position="right", text=element_text(family="Times New Roman")) +
+  labs(title = "Degree Centrality on Multiplex Net", subtitle = "The bigger the node, the more one has links")
+```
+
+

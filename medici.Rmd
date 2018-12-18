@@ -1,0 +1,121 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+library(igraph)
+finance = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vRjJ3-Vb4avMvHKxwTS6cO-BdLpRM8WDNHmRmv9Tzi6nIhNzzQmLglO7Iedp7_6sUgFgBppLqWQZgBt/pub?gid=0&single=true&output=csv"))
+finance$type = NULL
+
+marriage = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vRjJ3-Vb4avMvHKxwTS6cO-BdLpRM8WDNHmRmv9Tzi6nIhNzzQmLglO7Iedp7_6sUgFgBppLqWQZgBt/pub?gid=829327969&single=true&output=csv"))
+```
+
+```{r echo=FALSE, warning=FALSE}
+# фильтруем данные по размеру дегри и оставляем только узлы с дегри выше 20, это необходимо для того, чтобы сократить число узлов в сети и сократить ее размерность.
+df.g = graph_from_data_frame(finance)
+
+V(df.g)$Degree = igraph::degree(df.g)
+
+df.g = simplify(df.g, remove.multiple = TRUE)
+l = layout_nicely(df.g)
+
+V(df.g)$Degree = igraph::degree(df.g)
+
+# рисуем базовую сеть дружбы
+set.seed(1)
+plot(df.g, 
+     vertex.label=NA, 
+     vertex.color="black", 
+     vertex.size=0.9,
+     edge.width=0.5,
+     layout=l, mode="undirected")
+```
+
+
+#Меры централизации
+
+##Degree Centralization
+
+Метрика для сети и для идеальной сети: 
+
+```{r echo=FALSE, warning=FALSE}
+degr_cent = centr_degree(df.g, mode = "total", loops = TRUE, normalized = TRUE)
+degr_cent$centralization # получаем значение для сети
+degr_cent$theoretical_max # значение для идеальной сети с таким же кол-вом узлов и ребер
+```
+
+##Information Centralization
+
+Метрика для сети:
+
+```{r echo=FALSE, warning=FALSE}
+library(info.centrality)
+info_cent = info.centrality.vertex(df.g)
+centralize(info_cent, normalized = FALSE)
+```
+
+##Closeness Centralization
+
+Метрика для сети и для идеальной сети: 
+
+```{r echo=FALSE, warning=FALSE}
+close_cent = centralization.closeness(df.g, mode = "total", normalized = TRUE)
+close_cent$centralization
+close_cent$theoretical_max
+```
+
+
+##Betweenness Centralization
+
+Метрика для сети и для идеальной сети: 
+
+```{r echo=FALSE, warning=FALSE}
+node_cent = centralization.betweenness(df.g)
+node_cent$centralization
+node_cent$theoretical_max
+```
+
+
+##Edge betweenness Centralization
+
+Метрика для сети: 
+
+```{r echo=FALSE, warning=FALSE}
+edge_btw = edge_betweenness(df.g, e = E(df.g), directed = FALSE, weights = NULL)
+edge_cent = centralize(edge_btw, normalized = FALSE)
+edge_cent # не нормализованные значения
+```
+
+```{r echo=FALSE, warning=FALSE}
+V(df.g)$Degree = igraph::degree(df.g)
+
+
+#Попытаемся раскрасить график 
+# Сделаем палетку из 5 цветов
+library(RColorBrewer)
+coul = "lightblue"
+
+# Создадим цветовой вектор
+my_color=coul[as.numeric(as.factor(V(df.g)$Gender))]
+
+set.seed(250)
+plot(df.g, 
+vertex.label=NA,
+vertex.color=coul, 
+,
+edge.width=0.5,
+layout=l, mode="undirected", arrow)
+
+
+l = layout_nicely(df.g)
+plot(df.g, layout=l,edge.width=0.7,edge.arrow.size=0.2,
+vertex.label = V(df.g)$name,vertex.size=abs(V(df.g)$Degree)*1, 
+vertex.label.font=1,vertex.label.dist=1,vertex.label.color="black",vertex.label.cex=0.9,
+vertex.size=3)
+
+ptable = as.data.frame(cbind(degree(df.g), closeness(df.g), betweenness(df.g), round(evcent(df.g)$vector, 3)))
+titles = c("Degree", "Closeness", "Betweenness", "Eigenvector")
+colnames(ptable) = titles
+ptable$names = rownames(ptable)
+```
