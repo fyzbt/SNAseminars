@@ -14,13 +14,7 @@ library(ggplot2)
 library(RColorBrewer)
 options(scipen = 999)
 
-
-
-
-
-job = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/jobs.csv"), row.names=1) 
-
-
+job = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/jobs.csv"), row.names=1)
 send = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/send.csv"), row.names=1) 
 receive = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/receive.csv"), row.names=1) 
 publish = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/publish.csv"), row.names=1) 
@@ -96,6 +90,64 @@ ggraph(mult.g, layout = "fr") +
   scale_color_manual(values=col_topics) +
   theme(legend.position="right", text=element_text(family="Times New Roman")) +
   labs(title = "Degree Centrality on Multiplex Net", subtitle = "The bigger the node, the more one has links")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+coll = as.matrix(colleagues)
+
+coll.g <- graph.adjacency(coll,mode="undirected",
+                            weighted=NULL, diag=FALSE)
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+coul9 = brewer.pal(9, "Set1")
+V(coll.g)$atr = attributes$affiliation
+my_color1=coul9[as.numeric(as.factor(V(coll.g)$atr))]
+V(coll.g)$color=my_color1
+
+V(coll.g)$asslm=attributes$assimilat5
+V(coll.g)$gen= attributes$gender
+V(coll.g)$rugrant=attributes$ru_grants2
+V(coll.g)$engrant=attributes$WeGrants2
+V(coll.g)$lat=attributes$Latour2
+V(coll.g)$tosc=attributes$Toschenko2
+V(coll.g)$born=attributes$born2
+V(coll.g)$res=attributes$research2
+V(coll.g)$lib=attributes$liberalism2
+
+V(coll.g)$Info = info.centrality.vertex(coll.g)
+V(coll.g)$Degree = igraph::degree(coll.g)
+V(coll.g)$Betweenness = igraph::betweenness(coll.g)
+V(coll.g)$Constraint=igraph::constraint(coll.g)
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+#один из вариантов чб картинки
+set.seed(1)  
+ggraph(coll.g) + 
+    geom_edge_link() + 
+    geom_node_point(aes(colour = V(coll.g)$asslm),size=V(coll.g)$Info*100)+
+  geom_node_label(aes(label=ifelse(V(coll.g)$Info >0.025, 
+                                    V(coll.g)$name, NA)),repel=T)+
+  scale_fill_grey() +
+  theme_void() +
+  theme(legend.position="right", text=element_text(family="Times New Roman")) +
+  ggtitle("Степень ориентированности на Запад(цвет) в зависимости от\nInformation centrality (размер)")
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+set.seed(1)  
+ggraph(coll.g) + 
+    geom_edge_link() + 
+    geom_node_point(aes(colour=V(coll.g)$asslm,shape=factor(V(coll.g)$lib)),size=5)+
+  geom_node_label(aes(label=ifelse(V(coll.g)$Degree >20, 
+                                    V(coll.g)$name, NA)),repel=T) +
+  ggtitle("Степень ориентированности на Запад\n в зависимости от либерализма") +
+  theme_void() +
+  theme(legend.position="right", text=element_text(family="Times New Roman"))
 ```
 
 
