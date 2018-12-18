@@ -1,7 +1,6 @@
 ---
-title: "Transitivy and clustering"
+title: "Практическое занятие 3: Transitivy and clustering"
 output: html_document
-author: Anya Bataeva
 ---
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -13,7 +12,7 @@ library(dplyr)
 library(ggplot2)
 options(scipen = 999)
 
-
+LONDON_GANG_ATTR = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/LONDON_GANG_ATTR.csv"), header=T, row.names=1)
 m = read.csv(url("https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/LONDON_GANG.csv"), header=T, row.names=1) # загружаем датасет со связями
 m = ifelse(m != 1, 0, 1)
 m = as.matrix(m)
@@ -48,9 +47,13 @@ list("weighted")
 The same as barrat.
 
 
+### Global transitivity
+
 ```{r echo=FALSE, warning=FALSE}
 transitivity(gang, type="global")
 ```
+
+### Local transitivity
 
 ```{r echo=FALSE, warning=FALSE}
 local_transit = transitivity(gang, type="local")
@@ -62,9 +65,13 @@ ggraph(gang, layout = "fr") +
   theme(legend.position="none", text=element_text(family="Times New Roman"))
 ```
 
+Undirected type of transitivity
+
 ```{r echo=FALSE, warning=FALSE}
 transitivity(gang, type="undirected")
 ```
+
+Barrat transitivity
 
 ```{r echo=FALSE, warning=FALSE}
 transitivity(gang, type="barrat")
@@ -72,96 +79,104 @@ transitivity(gang, type="barrat")
 
 
 # Clustering coefficient
-```{r}
+```{r echo=FALSE, warning=FALSE, paged.print=FALSE}
 library(NetworkToolbox)
 cl_coeff <- clustcoeff(m, weighted = FALSE)
 ```
+
 Global clustering coefficient
-```{r}
+
+```{r echo=FALSE, warning=FALSE, paged.print=FALSE}
 cl_coeff$CC
 ```
+
 Local clustering coefficient
-```{r}
+
+```{r echo=FALSE, warning=FALSE, paged.print=FALSE}
 cl_coeff$CCi
-cl_coeff_CCi <- as.data.frame(cl_coeff$CCi) %>% mutate(name=rownames(cl_coeff_CCi)) 
+cl_coeff_CCi <- as.data.frame(cl_coeff$CCi)
 colnames(cl_coeff_CCi)[1] <- "coeff"
-cl_coeff_CCi <- cl_coeff_CCi %>% select(name, coeff)
+cl_coeff_CCi$name = rownames(cl_coeff_CCi) 
 ```
 
-# Community detection algos
+# Community detection algorithms
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
 library(stringr)
-m<-read.csv(file.choose(),header=T,row.names=1)
-
 m1<-ifelse (m != 1, 0, 1)
 
 m1<-as.matrix(m1)
 gang <- graph.adjacency(m1,mode="undirected",
                             weighted=NULL, diag=FALSE)
-gang = delete.vertices(gang, V(gang)[degree(gang) < 1])
 
 la<-layout_nicely(gang)
-plot(gang, layout=la, vertex.size=3,edge.width=e.wt,
+plot(gang, layout=la, vertex.size=3,
      vertex.label=NA)
 
 ```
 
-Коммьюнити детекшн
+##Cliques
 
-```{r}
-#КЛИКИИИ
+Размер клик
 
-cliques(gang,min=3) # list of cliques
+```{r echo=FALSE, warning=FALSE, paged.print=FALSE}
+# cliques(gang,min=3) # list of cliques
 sapply(cliques(gang,min=3), length)  # размеры клик
-largest_cliques(gang) # самые большие клики
-
-
-#КОРЫЫЫ
-kcore <- coreness(gang)    
-V(gang)$core <- kcore   
-plot.igraph(gang, vertex.color=V(gang)$core, vertex.label=NA)#один из вариантов визуализации
-
-
-#ЛУВЭЙН
-lvc <- cluster_louvain(gang)
-lvc
-sizes(lvc)
-V(gang)$lvc<-cluster_louvain(gang)
-
-
 ```
 
-Картиночки
+Самые большие клики
 
-```{r}
+```{r echo=FALSE, warning=FALSE, paged.print=FALSE}
+largest_cliques(gang) # самые большие клики
+```
+
+Визуализация клик
+
+```{r echo=FALSE, warning=FALSE, paged.print=FALSE}
 #cliques
 set.seed(42)
 vcol <- rep("grey80", vcount(gang))
 vcol[unlist(largest_cliques(gang))] <- "gold"
 plot(as.undirected(gang), vertex.label=NA, vertex.color=vcol,vertex.size=6,edge.width=0.7)
+```
 
 
+##K-cores
 
+```{r echo=FALSE, warning=FALSE, paged.print=FALSE}
+kcore <- coreness(gang)    
+V(gang)$core <- kcore   
+plot.igraph(gang, vertex.color=V(gang)$core, vertex.label=NA)#один из вариантов визуализации
+```
+
+```{r echo=FALSE, warning=FALSE, paged.print=FALSE}
 #k-cores
 set.seed(42)
 colrs <- adjustcolor( c("gray50", "tomato", "gold", "yellowgreen","lightblue","darkslateblue"), alpha=.6)
  kc <- coreness(gang)
 plot(gang, vertex.size=kc*3, vertex.label=kc, vertex.color=colrs[kc])
-coreness(gang)
+```
 
+##Louvaine 
 
+```{r echo=FALSE, warning=FALSE, paged.print=FALSE}
+lvc <- cluster_louvain(gang)
+sizes(lvc)
+V(gang)$lvc<-cluster_louvain(gang)
+```
+
+```{r echo=FALSE, warning=FALSE, paged.print=FALSE}
 #Louvaine
 set.seed(42)
 plot(lvc, gang,
      edge.widh=0.3,
      vertex.label = NA, vertex.size=6,
      layout = layout_with_kk)
-
 ```
 
 # Articulation points
-```{r}
+
+```{r echo=FALSE, warning=FALSE, paged.print=FALSE}
 articulation.points(gang)
 
 V(gang)$color <- "grey80"
@@ -194,7 +209,11 @@ plot(gang, layout = layout.fruchterman.reingold,
      vertex.label.font = 2,
      edge.color=E(gang)$color,
      edge.width=0.7)
+```
 
+#Bi components
+
+```{r echo=FALSE, warning=FALSE, paged.print=FALSE}
 #би компоненты
 bc <- biconnected_components(gang)
 summary(bc)
@@ -214,7 +233,3 @@ plot(gang, layout = layout.fruchterman.reingold,
      vertex.size = 6)
 ```
 
-таблица с саммари по всем метрикам (дигри, клозенес, битвиность, eigen vector centrality)
-```{r}
-ptable = as.data.frame(cbind(degree(gang), closeness(gang), betweenness(gang), round(evcent(gang)$vector, 3)))
-```
