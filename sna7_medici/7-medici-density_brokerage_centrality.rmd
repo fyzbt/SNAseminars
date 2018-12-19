@@ -1,0 +1,456 @@
+---
+title: "medici"
+author: 
+date: "13 12 2018"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE,warning=FALSE,message=FALSE)
+```
+
+```{r, echo=FALSE,warning=FALSE,message=FALSE}
+#загрузка данных
+library(readr)
+library(dplyr)
+library(igraph)
+library(ggraph)
+
+marriage = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vRjJ3-Vb4avMvHKxwTS6cO-BdLpRM8WDNHmRmv9Tzi6nIhNzzQmLglO7Iedp7_6sUgFgBppLqWQZgBt/pub?gid=829327969&single=true&output=csv"))
+
+marriage_new = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vR6xkIF9Tz5eREgiCFBytlWyzmcyGe1gu5dDT5-D0Yiif-l27sS5L1-zJCdf3v-PJ9PoZWOA44lgu-7/pub?output=csv"))
+trade = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vQQM1xOUk6kZk5YqJHQYqwzQnvAH_9xN5JCbavNVHBMKnQYpjQ1mw02_k4n5wuGVH71SILJC6uFwxZN/pub?output=csv"))
+partnership = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vT4hG0AC5ZRYKpvEsoLJ0_qw6JKa32YOLEEGdLZzvWBegeYl1QJ66dHNXOAau_rl_h3wp4qQ0Y3T576/pub?output=csv"))
+real_estate = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vQXUZdbFHJCjxUgSn8t23NmEA2-QFEN1VjuHI8Sa79F6BCr0zlvMPMXpMIyAL3quto4XnGa94xWsu17/pub?output=csv"))
+bank_employment = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vTZ7l-Mc0Au-u49z13bZiXfXLh-tJ8ufTctgmjhnk4JB7yRmccj-JnYOC17j8GdwvUg12JF5h0YED61/pub?output=csv"))
+mallevadori = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vTYW884j6eruZvv-L0lBk9hDC-gqJbhnUvScJpF4RVgtZXw32brZ2ZqcDiAeXN4eG0giM9mn_B1MDM5/pub?output=csv"))
+friendship = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vSyzRNqrozviTdfGEYSM4QkYFy3KDNXEeiSED4m9f7fmiJLQD6GuGNOg-rzSr5ax_Jii_4PXCBBCpRp/pub?output=csv"))
+personal_loan = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vSho51HV6WAKEicvi3aFO9XoRPQf4ydaZdX5VtFewz6UOQtH22AuaR0qLX2I8QUYi_o_o6NEGBoVIbL/pub?output=csv"))
+patronage = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vSxTkjKJF9N-XD2syE1XeVsXw2EG8xvvnsP7OfApnLOlZIbKIO20Gs3ifXlyKgdt5dcMobzNFu659im/pub?output=csv"))
+
+medici_attr = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vT8IN7oKwWCoV6t6ckG7VmZ1l70rEb9MBl2A0aAPBrp9Q21ZWtzYAcQicCeO5t9nC8dYNQN_m57qYgz/pub?output=csv"))
+
+```
+#Сеть связей Marriage
+```{r}
+marriage_g <- graph_from_data_frame(marriage_new)
+marriage_m <- as_adjacency_matrix(marriage_g)
+marriage_m <- as.matrix(marriage_m)
+marriage_m<-marriage_m[-34,]
+marriage_m<-marriage_m[,-34]
+marriage.g <- graph.adjacency(marriage_m)
+
+set.seed(0808)
+plot.igraph(marriage.g, vertex.color="#e4d1d1",
+layout=layout_with_fr, 
+edge.arrow.size=.3, 
+vertex.label.cex=0.75)
+```
+
+#Сеть связей Trade
+```{r}
+trade_g <- graph_from_data_frame(trade)
+trade_m <- as_adjacency_matrix(trade_g)
+trade_m <- as.matrix(trade_m)
+trade_m<-trade_m[-34,]
+trade_m<-trade_m[,-34]
+trade.g <- graph.adjacency(trade_m)
+
+set.seed(0808)
+plot.igraph(trade.g, vertex.color="#b9b0b0",
+layout=layout_with_fr, 
+edge.arrow.size=.3, 
+vertex.label.cex=0.75)
+```
+
+#Сеть связей Partnership
+```{r}
+partnership_g <- graph_from_data_frame(partnership)
+partnership_m <- as_adjacency_matrix(partnership_g)
+partnership_m <- as.matrix(partnership_m)
+partnership_m<-partnership_m[-34,]
+partnership_m<-partnership_m[,-34]
+partnership.g <- graph.adjacency(partnership_m)
+
+plot.igraph(partnership.g, vertex.color="#d9ecd0",
+layout=layout_with_kk, 
+edge.arrow.size=.3, 
+vertex.label.cex=0.75)
+```
+
+#Сеть связей Real_estate
+```{r}
+real_estate_g <- graph_from_data_frame(real_estate)
+real_estate_m <- as_adjacency_matrix(real_estate_g)
+real_estate_m <- as.matrix(real_estate_m)
+real_estate_m<-real_estate_m[-34,]
+real_estate_m<-real_estate_m[,-34]
+real_estate.g <- graph.adjacency(real_estate_m)
+
+set.seed(0808)
+plot.igraph(real_estate.g, vertex.color="#77a8a8",
+layout=layout_with_fr, 
+edge.arrow.size=.3, 
+vertex.label.cex=0.75)
+```
+
+#Сеть связей bank_employment
+```{r}
+bank_employment_g <- graph_from_data_frame(bank_employment)
+bank_employment_m <- as_adjacency_matrix(bank_employment_g)
+bank_employment_m <- as.matrix(bank_employment_m)
+bank_employment_m<-bank_employment_m[-34,]
+bank_employment_m<-bank_employment_m[,-34]
+bank_employment.g <- graph.adjacency(bank_employment_m)
+
+set.seed(0808)
+plot.igraph(bank_employment.g, vertex.color="#f0efef",
+layout=layout_with_fr,
+ 
+edge.arrow.size=.3, 
+vertex.label.cex=0.75)
+```
+
+#Сеть связей Mallevadori
+```{r}
+mallevadori_g <- graph_from_data_frame(mallevadori)
+mallevadori_m <- as_adjacency_matrix(mallevadori_g)
+mallevadori_m <- as.matrix(mallevadori_m)
+mallevadori_m<-mallevadori_m[-34,]
+mallevadori_m<-mallevadori_m[,-34]
+mallevadori.g <- graph.adjacency(mallevadori_m)
+
+set.seed(0808)
+plot.igraph(mallevadori.g, vertex.color="#c2d4dd",
+layout=layout_with_fr, 
+edge.arrow.size=.3, 
+vertex.label.cex=0.75)
+```
+
+#Сеть связей Friendship
+```{r}
+friendship_g <- graph_from_data_frame(friendship)
+friendship_m <- as_adjacency_matrix(friendship_g)
+friendship_m <- as.matrix(friendship_m)
+friendship_m<-friendship_m[-34,]
+friendship_m<-friendship_m[,-34]
+friendship.g <- graph.adjacency(friendship_m)
+
+set.seed(0808)
+plot.igraph(friendship.g, vertex.color="#b0aac0",
+layout=layout_with_fr, 
+edge.arrow.size=.3, 
+vertex.label.cex=0.75)
+```
+
+#Сеть связей Personal_loan
+```{r}
+personal_loan_g <- graph_from_data_frame(personal_loan)
+personal_loan_m <- as_adjacency_matrix(personal_loan_g)
+personal_loan_m <- as.matrix(personal_loan_m)
+personal_loan_m<-personal_loan_m[-27,]
+personal_loan_m<-personal_loan_m[,-27]
+personal_loan.g <- graph.adjacency(personal_loan_m)
+
+set.seed(0808)
+plot.igraph(personal_loan.g, vertex.color="#fbefcc",
+layout=layout_with_fr, 
+edge.arrow.size=.3, 
+vertex.label.cex=0.75)
+```
+
+#Сеть связей Patronage
+```{r}
+patronage_g <- graph_from_data_frame(patronage)
+patronage_m <- as_adjacency_matrix(patronage_g)
+patronage_m <- as.matrix(patronage_m)
+patronage_m<-patronage_m[-34,]
+patronage_m<-patronage_m[,-34]
+patronage.g <- graph.adjacency(patronage_m)
+
+set.seed(0808)
+plot.igraph(patronage.g, vertex.color="#f9ccac",
+layout=layout_with_fr, 
+edge.arrow.size=.3, 
+vertex.label.cex=0.75)
+```
+
+#Сеть Multiplex
+```{r}
+multiplex = marriage_m + trade_m + partnership_m + real_estate_m + bank_employment_m + mallevadori_m + friendship_m + personal_loan_m + patronage_m
+```
+
+```{r}
+mult.g <- graph.adjacency(multiplex,mode="undirected", weighted=TRUE, diag=T)
+V(mult.g)$Degree = igraph::degree(mult.g)
+V(mult.g)$Closeness = igraph::closeness(mult.g)
+V(mult.g)$Betwenness = igraph::betweenness(mult.g)
+library(info.centrality)
+V(mult.g)$Info = info.centrality.vertex(mult.g)
+```
+
+```{r}
+col_topics = c("marriage"="#e4d1d1", "trade"="#b9b0b0", "partnership"="#d9ecd0", "real_estate"="#77a8a8", "bank_employment"="#f0efef", "mallevadori"="#c2d4dd", "friendship"="#b0aac0", "personal_loan"="#fbefcc", "patronage"="#f9ccac")
+
+multiplex = marriage_m + trade_m + partnership_m + real_estate_m + bank_employment_m + mallevadori_m + friendship_m + personal_loan_m + patronage_m
+```
+
+```{r}
+multiplex = marriage_m + trade_m + partnership_m + real_estate_m + bank_employment_m + mallevadori_m + friendship_m + personal_loan_m + patronage_m
+
+V(mult.g)$party <- as.character(medici_attr$Party[match(V(mult.g)$name,medici_attr$X)])
+
+col_party = c("Oligarch"="#e4d1d1", "Medici"="#b9b0b0", "New_man"="#d9ecd0")
+set.seed(3698)
+plot.igraph(mult.g, vertex.color=col_party,
+layout=layout_with_fr)
+
+ggraph(mult.g, layout = "fr") +
+geom_edge_link(show.legend = TRUE, alpha = 0.4) +
+geom_node_point(aes(color = V(mult.g)$party), alpha = 0.9, size = 8) +
+geom_node_text(aes(label = name), repel = TRUE, size=3) +
+theme_void() +
+scale_color_manual(values=col_party) +
+theme(legend.position="right") +
+labs(title = "Party on Multiplex Net")
+
+edgelist <- as_edgelist(mult.g, names = TRUE) 
+edgelist <- as.data.frame(edgelist)
+colnames(edgelist)[1] <- "Source"
+colnames(edgelist)[2] <- "Target"
+
+geo = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vS0wEd4D8knyroQVb9tbESkaDan7wxKVgsVjzQ4_PYnr-KNjuQ0V0NaiN5Y76rfpNjxiWkiCsZsPHhu/pub?gid=393018236&single=true&output=csv"))
+
+edgelist_full <- edgelist
+edgelist_full$source_latitude <- as.numeric(geo$Latitude[match(edgelist$Source,geo$Name)])
+edgelist_full$source_longitude <- as.numeric(geo$Longitude[match(edgelist$Source,geo$Name)])
+
+edgelist_full$target_latitude <- as.numeric(geo$Latitude[match(edgelist$Target,geo$Name)])
+edgelist_full$target_longitude <-
+ 
+as.numeric(geo$Longitude[match(edgelist$Target,geo$Name)])
+
+edgelist_full <- edgelist_full %>% select(Source, source_latitude, source_longitude, Target, target_latitude, target_longitude)
+
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+V(mult.g)$politics <- as.character(medici_attr$Politics[match(V(mult.g)$name,medici_attr$X)])
+
+col_politics = c("Patrician"="#ddeedd", "Half"="#c2d4dd", "New_Man"="#b0aac0")
+set.seed(3698)
+plot.igraph(mult.g, vertex.color=col_politics,
+layout=layout_with_fr, 
+edge.arrow.size=.3, 
+vertex.label.cex=0.75)
+
+col_topics = c("1"="#78c1e2", "2"="#176ab6", "3"="#115dab", "4"="#254689", "5"="#050304", "9"="#ffe85b")
+
+ggraph(mult.g, layout = "fr") +
+geom_edge_link(show.legend = TRUE, alpha = 0.4) +
+geom_node_point(aes(color = V(mult.g)$politics), alpha = 0.9, size = 8) +
+geom_node_text(aes(label = name), repel = TRUE, size=3) +
+theme_void() +
+scale_color_manual(values=col_politics) +
+theme(legend.position="right") +
+labs(title = "Politics on Multiplex Net")
+
+```
+
+##Мультиплексы
+
+```{r}
+multiplex = marriage_m + trade_m + partnership_m + real_estate_m + bank_employment_m + mallevadori_m + friendship_m + personal_loan_m + patronage_m
+
+multi.mt= marriage_m + trade_m + partnership_m + real_estate_m + bank_employment_m
+multi.pf= mallevadori_m + friendship_m + personal_loan_m + patronage_m
+
+
+
+mult.g<-graph.adjacency(multiplex, mode = "undirected",weighted = T)
+mult.mt.g<-graph.adjacency(multi.mt, mode = "undirected",weighted = T)
+mult.pf.g<-graph.adjacency(multi.pf, mode = "undirected",weighted = T)
+
+V(mult.g)$party <- as.character(medici_attr$Party[match(V(mult.g)$name,medici_attr$X1)])
+V(mult.g)$polit <- as.character(medici_attr$Politics[match(V(mult.g)$name,medici_attr$X1)])
+
+V(mult.mt.g)$party <- as.character(medici_attr$Party[match(V(mult.mt.g)$name,medici_attr$X1)])
+V(mult.mt.g)$polit <- as.character(medici_attr$Politics[match(V(mult.mt.g)$name,medici_attr$X1)])
+V(mult.mt.g)$Degree<-degree(mult.mt.g)
+
+V(mult.pf.g)$party <- as.character(medici_attr$Party[match(V(mult.pf.g)$name,medici_attr$X1)])
+V(mult.pf.g)$polit <- as.character(medici_attr$Politics[match(V(mult.pf.g)$name,medici_attr$X1)])
+V(mult.pf.g)$Degree<-degree(mult.pf.g)
+
+col_party = c("Oligarch"="#e4d1d1", "Medici"="#b9b0b0", "New man"="#d9ecd0")
+col_polit=c("Patrician"="#77a8a8","Half"="#b0aac0","New"="#f9ccac")
+
+library(ggraph)
+set.seed(3698)
+ggraph(mult.mt.g, layout = "fr") +
+geom_edge_link(show.legend = TRUE,alpha=0.5) +
+geom_node_point(aes(color = V(mult.mt.g)$polit), alpha = 1, size = V(mult.mt.g)$Degree*1.5) +
+geom_node_text(aes(label = name), repel = TRUE, size=3) +
+theme_void() +
+scale_color_manual(values=col_polit) +
+theme(legend.position="right") +
+labs(title = "")
+
+
+set.seed(3698)
+ggraph(mult.pf.g, layout = "fr") +
+geom_edge_link(show.legend = TRUE,alpha=0.5) +
+geom_node_point(aes(color = V(mult.pf.g)$polit), alpha = 1, size =V(mult.pf.g)$Degree*3) +
+geom_node_text(aes(label = name), repel = TRUE, size=3) +
+theme_void() +
+scale_color_manual(values=col_polit) +
+theme(legend.position="right") +
+labs(title = "")
+
+V(mult.pf.g)$party
+
+```
+
+##Ограниченность сети 
+
+```{r}
+
+
+const <- constraint(mult.g)
+invConstraint <- 1.125 - const  # (Inverse constraint = brokerage potential)
+const
+
+
+const.mt <- constraint(mult.mt.g)
+const.pf<-constraint(mult.pf.g)
+invConstraint <- 1.125 - const.mt
+invConstraint1 <- 1.125 - const.pf
+```
+
+
+##Отделяем Медичи от олигархов, считает централизацию
+
+```{r}
+medic = c(
+"COCCO-DONATI",
+"DALL'ANTELLA",
+"DAVANZATI",
+"DIETISALVI",
+"GINORI",
+"GUICCIARDINI",
+"MEDICI",
+"ORLANDINI",
+'TORNABUONI',
+'VALORI')
+
+#Медичи браки и торговля
+multiplex_medic = as.matrix(subset(multi.mt, row.names(multi.mt) %in% medic))
+multiplex_medic = subset(multiplex_medic, select=medic)
+multiplex_medic.g<-graph.adjacency(multiplex_medic)
+degr_cent.med = centr_degree(multiplex_medic.g, mode = "total", loops = TRUE, normalized = TRUE)
+
+#Олигархи браки и торговля
+multiplex_olig = as.matrix(subset(multi.mt, !(row.names(multi.mt) %in% medic)))
+multiplex_olig = subset(multiplex_olig, select=row.names(multiplex_olig))
+multiplex_olig.g<-graph.adjacency(multiplex_olig)
+degr_cent.olig = centr_degree(multiplex_olig.g, mode = "total", loops = TRUE, normalized = TRUE)
+
+#Медичи политика и дружба
+multiplex_medic1 = as.matrix(subset(multi.pf, row.names(multi.pf) %in% medic))
+multiplex_medic1 = subset(multiplex_medic1, select=medic)
+multiplex_medic.g1<-graph.adjacency(multiplex_medic1)
+degr_cent.med1 = centr_degree(multiplex_medic.g1, mode = "total", loops = TRUE, normalized = TRUE)
+
+
+#Олигархи политика и дружба
+multiplex_olig1 = as.matrix(subset(multi.pf, !(row.names(multi.pf) %in% medic)))
+multiplex_olig1 = subset(multiplex_olig1, select=row.names(multiplex_olig1))
+multiplex_olig.g1<-graph.adjacency(multiplex_olig1)
+degr_cent.olig1 = centr_degree(multiplex_olig.g1, mode = "total", loops = TRUE, normalized = TRUE)
+```
+
+##Показатели плотности 
+
+```{r}
+graph.density(multiplex_olig.g1,loop=FALSE)
+graph.density(multiplex_medic.g1,loop=FALSE)
+graph.density(multiplex_olig.g,loop=FALSE)
+graph.density(multiplex_olig.g,loop=FALSE)
+```
+
+##Брокерство 
+```{r}
+
+library(sna)
+brokerage(multiplex, cl=V(mult.g)$polit)$raw.nli
+brokerage(multiplex, cl=V(mult.g)$party)$z.nli  
+round(brokerage(multiplex, cl=V(mult.g)$party)$z.nli, 2) 
+
+brokerage(multi.pf, cl=V(mult.pf.g)$party)$raw.nli
+brokerage(multi.pf, cl=V(mult.pf.g)$party)$z.nli  
+round(brokerage(multi.pf, cl=V(mult.pf.g)$party)$z.nli, 2) 
+brokerage(multi.mt, cl=V(mult.mt.g)$party)$raw.nli
+brokerage(multi.mt, cl=V(mult.mt.g)$party)$z.nli  
+round(brokerage(multi.mt, cl=V(mult.mt.g)$party)$z.nli, 2) 
+
+brokerage(multiplex, cl=V(mult.pf.g)$party)$raw.nli
+brokerage(multi.pf, cl=V(mult.pf.g)$party)$z.nli  
+round(brokerage(multi.pf, cl=V(mult.pf.g)$party)$z.nli, 2) 
+
+brokerage(multi.pf, cl=V(mult.pf.g)$polit)$raw.nli
+brokerage(multi.pf, cl=V(mult.pf.g)$polit)$z.nli  
+round(brokerage(multi.pf, cl=V(mult.pf.g)$polit)$z.nli, 2) 
+
+brokerage(multi.mt, cl=V(mult.mt.g)$polit)$raw.nli
+brokerage(multi.mt, cl=V(mult.mt.g)$polit)$z.nli  
+round(brokerage(multi.mt, cl=V(mult.mt.g)$polit)$z.nli, 2) 
+
+```
+
+##Интерактивная сеть на карте
+
+```{r}
+library(sp)
+crossdata <- lapply(rownames(multiplex),function(x)sapply(colnames(multiplex),function(y)list(x,y,multiplex[x,y])))  
+crossdatatmp <- matrix(unlist(crossdata),nrow=3)
+crossdatamat <- t(crossdatatmp)
+colnames(crossdatamat) <- c("Name","To","Value")
+crossdatadf <- as.data.frame(crossdatamat,stringsAsFactors=F)
+crossdatadf[,3] <- as.numeric(crossdatadf[,3])
+crossdatadf <- crossdatadf %>% filter(Value != 0)
+geo <- read_csv('~/Downloads/medici_geo.csv')
+geo <- right_join(crossdatadf, geo, by="Name")
+geo <- geo %>% select("Name", "Latitude", "Longitude")
+colnames(geo) <- c("name", "lat", "lon")
+crossdatadf <- crossdatadf %>% select(-Value)
+colnames(crossdatadf) = c("from", "to")
+geo <- geo[!duplicated(geo), ]
+crossdatadf <- crossdatadf %>% filter(from %in% geo$name)
+crossdatadf <- crossdatadf %>% filter(to %in% geo$name)
+
+g <- graph.data.frame(crossdatadf, directed=FALSE, vertices=geo)
+gg <- get.data.frame(g, "both")
+vert <- gg$vertices
+coordinates(vert) <- ~lon+lat
+
+edges <- gg$edges
+
+edges <- lapply(1:nrow(edges), function(i) {
+  as(rbind(vert[vert$name == edges[i, "from"], ], 
+           vert[vert$name == edges[i, "to"], ]), 
+     "SpatialLines")
+})
+
+
+for (i in seq_along(edges)) {
+  edges[[i]] <- spChFIDs(edges[[i]], as.character(i))
+}
+
+edges <- do.call(rbind, edges)
+
+
+library(leaflet)
+leaflet(vert) %>% addTiles() %>% addMarkers(label = vert$name, labelOptions = labelOptions(noHide = T), data = vert) %>% addPolylines(data = edges)
+```
+
+
