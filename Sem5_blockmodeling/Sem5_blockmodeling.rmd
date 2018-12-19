@@ -8,7 +8,8 @@ library(igraph)
 library(sna)
 
 fr= read.csv(url('https://raw.githubusercontent.com/fyzbt/SNAseminars/master/data/krebs_advice.csv'))
-
+rownames(fr) = fr$X
+fr$X = NULL
 fr = as.matrix(fr)
 fr<-ifelse (fr != 0, 1, 0)
 fr.g <- graph.adjacency(fr,mode="directed",
