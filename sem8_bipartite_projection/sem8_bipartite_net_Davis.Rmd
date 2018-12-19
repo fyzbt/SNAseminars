@@ -1,0 +1,317 @@
+---
+title: "Бимодальные сети и юнимодельная проекция"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+```
+
+```{r}
+#загрузка данных
+library(readr)
+library(dplyr)
+library(igraph)
+library(ggraph)
+
+
+davis123 = read.csv(url("https://docs.google.com/spreadsheets/d/e/2PACX-1vTiAMX0tLhgRGfSSIZap66_80I-UVDYmGQ8EOZHTieIRv4TX7e8dJVPq8O52sDbn2O9mVmRbURVpsoM/pub?output=csv"))
+
+g <- graph.data.frame(davis123, directed=FALSE)
+```
+
+```{r}
+bipartite.mapping(g)
+```
+
+```{r}
+
+V(g)$type <- bipartite_mapping(g)$type  ## Add the "type" attribute
+                                            ##  to the network.
+```
+###Построение сетей (бимодальные данные) 
+####Первоначальные данные
+#####Визуализация
+```{r include=FALSE}
+plot(g)
+```
+
+```{r include=FALSE}
+plot(g, vertex.label.cex = 0.8, vertex.label.color = "black")
+```
+
+```{r}
+V(g)$color <- ifelse(V(g)$type, "#b0aac0", "#ddeedd")
+V(g)$shape <- ifelse(V(g)$type, "circle", "square")
+E(g)$color <- "lightgray"
+  
+plot(g, vertex.label.cex = 0.8, vertex.label.color = "black")
+```
+
+####Немного изменяем размер
+```{r}
+V(g)$label.color <- "black" ##ifelse(V(g)$type, "black", "white")
+## V(g)$label.font <-  2
+V(g)$label.cex <- 1 ##ifelse(V(g)$type, 0.8, 1.2)
+## V(g)$label.dist <-0
+V(g)$frame.color <-  "gray"
+V(g)$size <- 18
+
+plot(g, layout = layout_with_graphopt)
+```
+
+####Строим такцю же сеть, но с иным лейаутом
+```{r}
+plot(g, layout=layout.bipartite, vertex.size=8, vertex.label.cex=0.6)
+```
+
+####Вычисляем меры узловой центральности
+```{r}
+types <- V(g)$type                 ## getting each vertex `type` let's us sort easily
+deg <- degree(g)
+betw <- betweenness(g)
+clos <- closeness(g)
+eig <- eigen_centrality(g)$vector
+
+cent_df <- data.frame(types, deg, betw, clos, eig)
+
+cent_df[order(cent_df$type, decreasing = TRUE),] ## sort w/ `order` by `type`
+
+```
+####Добавляем на сеть данные о дегри узла
+```{r}
+V(g)$size <- degree(g)
+V(g)$label.cex <- degree(g) * 0.2
+
+plot(g, layout = layout_with_graphopt)
+
+```
+
+###Converting Two-Mode to One-Mode Networks
+
+```{r}
+bipartite_matrix <- as_incidence_matrix(g)
+bipartite_matrix
+```
+```{r}
+t(bipartite_matrix)
+```
+
+###Matrix Multiplication - For Overlap Count
+```{r}
+event_matrix_prod <- t(bipartite_matrix) %*% bipartite_matrix 
+
+## crossprod() does same and scales better, but this is better to learn at first at first so you understand the method
+
+diag(event_matrix_prod) <- 0
+
+event_matrix_prod
+
+
+```
+
+```{r}
+person_matrix_prod <- bipartite_matrix %*% t(bipartite_matrix)
+
+diag(person_matrix_prod) <- 0
+
+person_matrix_prod
+```
+
+####women_overlap
+```{r}
+
+women_overlap <- graph_from_adjacency_matrix(person_matrix_prod, 
+                                        mode = "undirected", 
+                                        weighted = TRUE)
+women_overlap
+
+V(women_overlap)$color <- "#b0aac0"
+
+plot(women_overlap)
+```
+
+####events_overlap
+```{r}
+events_overlap <- graph_from_adjacency_matrix(event_matrix_prod, 
+                                       mode = "undirected", 
+                                       weighted = TRUE)
+
+events_overlap
+
+V(events_overlap)$color <- "#ddeedd"
+
+plot(events_overlap)
+```
+
+###Bipartite_projection
+```{r}
+projected_g <- bipartite_projection(g, multiplicity = TRUE)
+
+
+```
+```{r}
+events_auto_projected <- projected_g$proj1
+south_women_auto_projected <- projected_g$proj2
+
+events_auto_projected
+south_women_auto_projected
+```
+
+####Bipartite_projection Women
+```{r}
+plot(events_auto_projected)
+```
+
+####Bipartite_projection Event
+```{r}
+plot(south_women_auto_projected)
+```
+
+
+###Jaccard Similarity
+####Jaccard woman
+
+```{r}
+library(ade4) # If you have not already done so
+
+bipartite_matrix <- as_incidence_matrix(g)  # Extract the matrix
+
+women_jaccard <- dist.binary(bipartite_matrix, method=1, upper=TRUE, diag = FALSE) # Method #1 is "Jaccard Index"
+event_jaccard <- dist.binary(t(bipartite_matrix), method=1, upper=TRUE, diag = FALSE) 
+
+women_jaccard <- as.matrix(women_jaccard)   
+diag(women_jaccard)<-0
+
+# women_jaccard          # Look at the matrix before you binarize
+jaccard_women <- ifelse(women_jaccard>0.95, 1, 0)     # Binarize
+
+# jaccard_women      # Take a look at the matrix if you like.
+
+jacc_women <- graph_from_adjacency_matrix(jaccard_women,    # Create an igraph network
+                                        mode = "undirected")
+V(jacc_women)$color <- "#b0aac0"
+plot(jacc_women)
+```
+
+####Jaccard event
+```{r}
+library(ade4) # If you have not already done so
+
+bipartite_matrix <- as_incidence_matrix(g)  # Extract the matrix
+
+women_jaccard <- dist.binary(bipartite_matrix, method=1, upper=TRUE, diag = FALSE) # Method #1 is "Jaccard Index"
+event_jaccard <- dist.binary(t(bipartite_matrix), method=1, upper=TRUE, diag = FALSE) 
+
+event_jaccard <- as.matrix(event_jaccard)   
+diag(event_jaccard)<-0
+
+# women_jaccard          # Look at the matrix before you binarize
+jaccard_event <- ifelse(event_jaccard>0.95, 1, 0)     # Binarize
+
+# jaccard_women      # Take a look at the matrix if you like.
+
+jacc_event <- graph_from_adjacency_matrix(jaccard_event,    # Create an igraph network
+                                        mode = "undirected")
+V(jacc_event)$color <- "#ddeedd"
+plot(jacc_event)
+```
+
+
+###Pearson’s Correlation
+####Women corellation
+```{r}
+
+bipartite_matrix <- as_incidence_matrix(g)  # Extract the matrix
+
+women_correl <- cor(t(bipartite_matrix))
+event_correl <- cor(bipartite_matrix)
+
+women_correl <- as.matrix(women_correl)   
+# women_correl          # Look at the matrix before you binarize
+correl_women <- ifelse(women_correl>0.6, 1, 0)    # Binarize 
+diag(correl_women)<-0
+# correl_women    # Take a look at the matrix if you like
+
+
+corr_women <- graph_from_adjacency_matrix(correl_women,     # Create an igraph network
+                                        mode = "undirected")
+
+V(corr_women)$color <- "#b0aac0"
+plot(corr_women)
+```
+
+####Event correlation
+```{r}
+
+bipartite_matrix <- as_incidence_matrix(g)  # Extract the matrix
+
+women_correl <- cor(t(bipartite_matrix))
+event_correl <- cor(bipartite_matrix)
+
+event_correl <- as.matrix(event_correl)   
+# women_correl          # Look at the matrix before you binarize
+event_correl <- ifelse(event_correl>0.6, 1, 0)    # Binarize 
+diag(event_correl)<-0
+# correl_women    # Take a look at the matrix if you like
+
+
+event_correl <- graph_from_adjacency_matrix(event_correl,     # Create an igraph network
+                                        mode = "undirected")
+
+V(event_correl)$color <- "#ddeedd"
+plot(event_correl)
+```
+
+###Yule’s Q
+
+####women_Q
+```{r}
+library(psych)
+
+bipartite_matrix <- as_incidence_matrix(g)  # Extract the matrix
+
+women_Q <-YuleCor(t(bipartite_matrix))$rho
+event_Q <-YuleCor(bipartite_matrix)$rho
+
+women_Q <- as.matrix(women_Q) 
+women_Q        # Look at the matrix before you binarize
+
+
+Q_women <- ifelse(women_Q>0.9, 1, 0) # Binarize
+diag(Q_women)<-0
+# Q_women    # Take a look at the matrix
+
+YQ_women <- graph_from_adjacency_matrix(Q_women,     # Create an igraph network
+                                        mode = "undirected")
+V(YQ_women)$color <- "#b0aac0"
+plot(YQ_women)
+
+```
+
+####event_Q
+```{r}
+library(psych)
+
+bipartite_matrix <- as_incidence_matrix(g)  # Extract the matrix
+
+women_Q <-YuleCor(t(bipartite_matrix))$rho
+event_Q <-YuleCor(bipartite_matrix)$rho
+
+event_Q <- as.matrix(event_Q) 
+event_Q        # Look at the matrix before you binarize
+
+
+event_Q <- ifelse(event_Q>0.9, 1, 0) # Binarize
+diag(event_Q)<-0
+# Q_women    # Take a look at the matrix
+
+event_Q <- graph_from_adjacency_matrix(event_Q,     # Create an igraph network
+                                        mode = "undirected")
+V(event_Q)$color <- "#ddeedd"
+plot(event_Q)
+
+```
